@@ -1,19 +1,6 @@
+import {z} from 'zod';
 import {createHash} from 'node:crypto';
-import {orderSchema} from '@/lib/order-validation';
-import {checkoutConfigured,buildOrder,saveOrder,receipt,findOrder} from '@/lib/order-service';
-import {getProducts} from '@/lib/store-data';
 import {rateLimit} from '@/lib/redis';
-import {json,sameOrigin} from '@/lib/admin-auth';
 export const runtime='nodejs';
-export async function POST(request:Request){
- if(!sameOrigin(request))return json({error:'Please place your order from our website.'},403);
- if(!request.headers.get('content-type')?.includes('application/json'))return json({error:'Invalid request format.'},415);
- if(!checkoutConfigured())return json({error:'Online ordering is being prepared. Please check back soon.'},503);
- let parsed;try{const body=await request.text();if(body.length>12000)return json({error:'Order details are too long.'},413);parsed=orderSchema.safeParse(JSON.parse(body));}catch{return json({error:'Please check your order details.'},400)}
- if(!parsed.success)return json({error:parsed.error.issues[0].message},400);
- try{const ip=request.headers.get('x-vercel-forwarded-for')||request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||'local';if(!await rateLimit(createHash('sha256').update(ip).digest('hex').slice(0,24)))return json({error:'Too many attempts. Please try again in a few minutes.'},429);
- const existing=await findOrder(parsed.data);if(existing)return json({ok:true,order:receipt(existing)});
- const products=await getProducts();let order;try{order=buildOrder(parsed.data,products)}catch(e){return json({error:e instanceof Error?e.message:'Please review your bag.'},400)}
- const saved=await saveOrder(order);return json({ok:true,order:receipt(saved.order)},saved.existing?200:201);
- }catch(e){if(e instanceof Error&&e.message==='IDEMPOTENCY_CONFLICT')return json({error:'Order attempt already exists with different details. Start a new order.'},409);return json({error:'We could not confirm your order. Please retry; a repeated submission will not create a duplicate.'},503)}
-}
+const schema=z.object({name:z.string().trim().min(2).max(100),email:z.email().max(254),message:z.string().trim().min(10).max(3000)}).strict();
+export async function POST(request:Request){if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Please use our website contact form.'},{status:403});if(!request.headers.get('content-type')?.includes('application/json'))return Response.json({error:'Invalid request.'},{status:415});if(!['RESEND_API_KEY','ORDER_FROM_EMAIL','ORDER_NOTIFICATION_EMAIL','UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN'].every(k=>Boolean(process.env[k])))return Response.json({error:'Our contact desk is not open yet.'},{status:503});let input;try{const raw=await request.text();if(raw.length>10000)return Response.json({error:'Message is too long.'},{status:413});input=schema.safeParse(JSON.parse(raw))}catch{return Response.json({error:'Please check your message.'},{status:400})}if(!input.success)return Response.json({error:'Please provide your name, a valid email and a message.'},{status:400});try{const ip=request.headers.get('x-vercel-forwarded-for')||request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||'local';if(!await rateLimit('contact:'+createHash('sha256').update(ip).digest('hex').slice(0,24)))return Response.json({error:'Please wait a few minutes before sending another message.'},{status:429});const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.ORDER_FROM_EMAIL,to:[process.env.ORDER_NOTIFICATION_EMAIL],reply_to:input.data.email,subject:'Sleek Touch contact enquiry',text:`Name: ${input.data.name}\nEmail: ${input.data.email}\n\n${input.data.message}`}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error();return Response.json({ok:true})}catch{return Response.json({error:'Your message could not be sent. Please try again shortly.'},{status:503})}}
