@@ -1,0 +1,12 @@
+import {getProducts} from '@/lib/store-data';
+import Link from 'next/link';
+import {notFound} from 'next/navigation';
+import ProductCard from '@/components/product-card';
+import {collections} from '@/lib/catalog';
+import {ArrowRight,ChevronRight,Sparkles} from '@/components/icons';
+export function generateStaticParams(){return [{slug:'all'},...collections.map(c=>({slug:c.slug}))]}
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;return {title:collections.find(c=>c.slug===slug)?.label||'Shop all'}}
+export default async function CollectionPage({params}:{params:Promise<{slug:string}>}){
+ const {slug}=await params;const collection=collections.find(c=>c.slug===slug);if(slug!=='all'&&!collection)notFound();const products=(await getProducts()).filter(p=>slug==='all'||p.categories.includes(slug));const hasProduct=products.length>0;
+ return <section className="page-section"><div className="breadcrumbs"><Link href="/">Home</Link><ChevronRight size={11}/><span>{collection?.label||'Shop all'}</span></div><div className="collection-intro"><span className="eyebrow pink">{collection?.eyebrow||'YOUR EVERYDAY DISCOVERIES'}</span><h1>{collection?.name||'The Sleek Touch edit.'}</h1><p>{collection?.description||'Beauty, style, and the little things that make getting ready feel good.'}</p><nav className="collection-tabs" aria-label="Collections">{[{slug:'all',label:'Shop all'},...collections].map(c=><Link key={c.slug} href={'/collections/'+c.slug} className={slug===c.slug?'active':''} aria-current={slug===c.slug?'page':undefined}>{c.label}</Link>)}</nav></div><div className="catalog-bar"><span>{hasProduct?products.length+' everyday favourite'+(products.length===1?'':'s'):'New edit coming soon'}</span><span>Thoughtfully selected. Just for you.</span></div>{hasProduct?<div className="catalog-grid">{products.map(p=><ProductCard key={p.id} product={p}/>)}</div>:<div className="empty-collection">{collection?.image?<img src={collection.image} alt={'A preview of '+collection.label.toLowerCase()} width={600} height={600}/>:<div className="coming-soon-icon"><Sparkles size={44}/></div>}<h2>Your {collection?.label.toLowerCase()} edit is coming.</h2><p>We?re putting the finishing touches on this collection. Discover our available favourites while we get ready.</p><Link href="/collections/all" className="button">Explore the store <ArrowRight size={17}/></Link></div>}</section>
+}

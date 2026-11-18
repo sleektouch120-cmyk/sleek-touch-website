@@ -1,0 +1,2 @@
+import {redis} from '@/lib/redis';
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;if(!/^[a-f0-9-]{36}$/.test(id))return new Response(null,{status:404});try{const raw=await redis<string|null>(['GET','sleektouch:media:'+id]);if(!raw)return new Response(null,{status:404});const {mime,data}=JSON.parse(raw);return new Response(Buffer.from(data,'base64'),{headers:{'Content-Type':mime,'Cache-Control':'public,max-age=31536000,immutable','X-Content-Type-Options':'nosniff'}})}catch{return new Response(null,{status:503})}}

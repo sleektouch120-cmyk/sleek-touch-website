@@ -1,0 +1,6 @@
+import SocialLogo from '@/components/social-logo';
+import ContactForm from '@/components/contact-form';
+import {brand} from '@/lib/catalog';
+import {Mail,Phone} from '@/components/icons';
+export const dynamic='force-dynamic';export const metadata={title:'Contact us'};
+export default function Contact(){const enabled=['RESEND_API_KEY','ORDER_FROM_EMAIL','ORDER_NOTIFICATION_EMAIL','UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN'].every(k=>Boolean(process.env[k]));return <section className="information-page"><span className="eyebrow pink">LET’S TALK BEAUTY</span><h1>Here for the little details.</h1><p>A shade question? An order update? Something you’d love to see? Leave us a message.</p><div className="contact-options"><a href={`tel:${brand.phone}`}><Phone size={20}/>{brand.phoneDisplay}</a>{brand.email&&<a href={`mailto:${brand.email}`}><Mail size={20}/>{brand.email}</a>}{brand.whatsapp&&<a href={`https://wa.me/${brand.whatsapp}`}><SocialLogo platform="whatsapp"/>Chat on WhatsApp</a>}{brand.instagram&&<a href={brand.instagram}><SocialLogo platform="instagram"/>Find us on Instagram</a>}{brand.facebook&&<a href={brand.facebook}><SocialLogo platform="facebook"/>Find us on Facebook</a>}</div><ContactForm enabled={enabled}/></section>}
