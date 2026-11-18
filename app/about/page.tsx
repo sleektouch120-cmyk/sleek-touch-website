@@ -1,4 +1,6 @@
-import Link from 'next/link';
-import {ArrowUpRight} from '@/components/icons';
-export const metadata={title:'Our story'};
-export default function About(){return <article className="information-page"><span className="eyebrow pink">A LITTLE ABOUT SLEEK TOUCH</span><h1>Good beauty.<br/>Entirely your kind.</h1><p className="about-lead">A favourite shade. A few quiet minutes. A small ritual that makes the day feel like yours.</p><img src="/images/campaign-hero.webp" alt="Sleek Touch beauty campaign" width={1536} height={1024}/><h2>For your everyday, and everything else.</h2><p>We believe beauty is personal. Some days it’s your favourite foundation. Other days it’s slowing down and making a little room for yourself.</p><p>Sleek Touch brings beauty and style together, with edits for makeup, skincare, clothing, bags, haircare, nails, lenses, and personal care. A place to explore a new shade, find a familiar favourite, and make getting ready a moment you enjoy.</p><h2>A little less complicated.</h2><p>Clear product information, simple ordering, and cash on delivery. We’re building a beauty space that fits into your life, at your own pace.</p><Link href="/collections/all" className="button">Find your everyday favourite <ArrowUpRight size={17}/></Link></article>}
+import {isAdmin} from '@/lib/admin-auth';
+import {storageConfigured} from '@/lib/store-data';
+import Dashboard from '@/components/dashboard';
+export const dynamic='force-dynamic';
+export const metadata={title:'Shop dashboard',robots:{index:false,follow:false}};
+export default async function Admin(){return <Dashboard authenticated={await isAdmin()} configured={storageConfigured()&&Boolean(process.env.ADMIN_PASSWORD_HASH&&process.env.ADMIN_SESSION_SECRET)}/>}
